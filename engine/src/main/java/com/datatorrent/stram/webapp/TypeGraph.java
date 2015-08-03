@@ -105,7 +105,12 @@ public class TypeGraph
     }
     return false;
   }
-  
+
+  public TypeGraphVertex getNode(String typeName)
+  {
+    return typeGraph.get(typeName);
+  }
+
   enum UI_TYPE {
 
     LIST("List", Collection.class.getName()),
@@ -214,7 +219,7 @@ public class TypeGraph
 
   private final Map<String, TypeGraphVertex> typeGraph = new HashMap<String, TypeGraphVertex>();
 
-  private void addNode(InputStream input, String resName) throws IOException
+  private TypeGraphVertex addNode(InputStream input, String resName) throws IOException
   {
     try {
       
@@ -223,7 +228,6 @@ public class TypeGraph
       reader.accept(classN, ClassReader.SKIP_CODE);
       CompactClassNode ccn = CompactUtil.compactClassNode(classN);
       String typeName = classN.name.replace('/', '.');
-      
       TypeGraphVertex tgv = null;
       TypeGraphVertex ptgv = null;
       if (typeGraph.containsKey(typeName)) {
@@ -259,6 +263,7 @@ public class TypeGraph
       }
 
       updateInstantiableDescendants(tgv);
+      return tgv;
     } finally {
       if (input != null) {
         input.close();
@@ -266,14 +271,14 @@ public class TypeGraph
     }
   }
 
-  public void addNode(File file) throws IOException
+  public TypeGraphVertex addNode(File file) throws IOException
   {
-    addNode(new FileInputStream(file), file.getAbsolutePath());
+    return addNode(new FileInputStream(file), file.getAbsolutePath());
   }
 
-  public void addNode(JarEntry jarEntry, JarFile jar) throws IOException
+  public TypeGraphVertex addNode(JarEntry jarEntry, JarFile jar) throws IOException
   {
-    addNode(jar.getInputStream(jarEntry), jar.getName());
+    return addNode(jar.getInputStream(jarEntry), jar.getName());
   }
 
   public void updatePortTypeInfoInTypeGraph(Map<String, JarFile> openJarFiles,
@@ -441,7 +446,9 @@ public class TypeGraph
 
     // keep the jar file name for late fetching the detail information
     private String jarName;
-    
+
+    private boolean hasRes = false;
+
     @SuppressWarnings("unused")
     private TypeGraphVertex(){
       jarName = "";
@@ -465,6 +472,16 @@ public class TypeGraph
     {
       this.typeName = typeName;
       this.jarName = jarName;
+    }
+
+    public boolean isHasRes()
+    {
+      return hasRes;
+    }
+
+    public void setHasRes(boolean hasRes)
+    {
+      this.hasRes = hasRes;
     }
 
     private boolean isInstantiable()
@@ -606,6 +623,12 @@ public class TypeGraph
     }
     
     addClassPropertiesAndPorts(clazzName,  desc);
+
+    if(tgv.isHasRes()){
+      desc.put("hasResource", "true");
+    } else {
+      desc.put("hasResource", "false");
+    }
 
     return desc;
   }
